@@ -1,27 +1,26 @@
 package bgu.spl.net.srv;
 
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ConnectionsImpl implements Connections<byte[]> {
+public class ConnectionsImpl<T> implements Connections<T> {
 
-    private ConcurrentHashMap<Integer, ConnectionHandler<byte[]>> connections;
+    private ConcurrentHashMap<Integer, ConnectionHandler<T>> connections;
 
     public ConnectionsImpl()
     {
-        connections = new ConcurrentHashMap<Integer, ConnectionHandler<byte[]>>();
+        connections = new ConcurrentHashMap<Integer, ConnectionHandler<T>>();
     }
 
     @Override
-    public void connect(int connectionId, ConnectionHandler<byte[]> handler)
+    public void connect(int connectionId, ConnectionHandler<T> handler)
     {
         this.connections.put(connectionId, handler);
     }
 
     @Override
-    public boolean send(int connectionId, byte[] msg)
+    public boolean send(int connectionId, T msg)
     {
-        ConnectionHandler<byte[]> ch = this.connections.get(connectionId);
+        ConnectionHandler<T> ch = this.connections.get(connectionId);
         if(ch != null)
         {
             ch.send(msg);
