@@ -16,16 +16,21 @@ public abstract class BaseServer<T> implements Server<T> {
     private final Supplier<TftpProtocol> protocolFactory;
     private final Supplier<TftpEncoderDecoder> encdecFactory;
     private ServerSocket sock;
+    private int connectionId;
+    private ServerData serverData;
 
     public BaseServer(
             int port,
             Supplier<TftpProtocol> protocolFactory,
-            Supplier<TftpEncoderDecoder> encdecFactory) {
+            Supplier<TftpEncoderDecoder> encdecFactory,
+            ServerData serverData) {
 
         this.port = port;
         this.protocolFactory = protocolFactory;
         this.encdecFactory = encdecFactory;
 		this.sock = null;
+        this.connectionId = 1;
+        this.serverData = serverData;
     }
 
     @Override
@@ -41,7 +46,7 @@ public abstract class BaseServer<T> implements Server<T> {
                 Socket clientSock = serverSock.accept();
 
                 BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<>(clientSock, encdecFactory.get(), 
-                protocolFactory.get());
+                protocolFactory.get(),this.connectionId++, serverData);
                 execute(handler);
             }
         } catch (IOException ex) {

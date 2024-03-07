@@ -18,26 +18,33 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     private BufferedInputStream in;
     private BufferedOutputStream out;
     private volatile boolean connected = true;
+    private ServerData serverData;
+    private int connectionId;
 
-    public BlockingConnectionHandler(Socket sock, TftpEncoderDecoder reader, TftpProtocol protocol) {
+    public BlockingConnectionHandler(Socket sock, TftpEncoderDecoder reader, TftpProtocol protocol, int connectionId, ServerData serverData) {
         this.sock = sock;
         this.encdec = reader;
         this.protocol = protocol;
+        this.serverData = serverData;
+        this.connectionId = connectionId;
     }
 
     @Override
     public void run() {
         try (Socket sock = this.sock) { //just for automatic closing
             int read;
-
             in = new BufferedInputStream(sock.getInputStream());
             out = new BufferedOutputStream(sock.getOutputStream());
-
+            this.protocol.start(connectionId, serverData.getConnections());
+            this.serverData.getConnections().connect(connectionId,this);
+            System.out.println("Client: " + this.connectionId + " connected to the server");
             while (!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
                 byte[] nextMessage = encdec.decodeNextByte((byte) read);
                 if (nextMessage != null) 
                 {
-                    send(nextMessage);
+                    System.out.println("Got message from client: " + this.connectionId);
+                    this.protocol.process(nextMessage);
+                    nextMessage = null;
                 }
             }
 
@@ -49,6 +56,7 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void close() throws IOException {
+        this.serverData.getConnections().disconnect(this.connectionId);
         connected = false;
         sock.close();
     }
@@ -57,7 +65,6 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     public void send(byte[] msg) {
         try
         {
-            this.protocol.process(msg);
             out.write(encdec.encode(msg));
             out.flush();
         } catch(IOException ex)

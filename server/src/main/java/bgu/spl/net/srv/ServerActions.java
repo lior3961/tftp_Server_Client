@@ -40,11 +40,12 @@ public class ServerActions {
                 String userName = this.getUserName(msg);
                 if(!this.serverData.logInOrRegister(userName))
                 {
-                    String str = "User already logged in – Login username already connected.\r"; // Example string
+                    String str = "User already logged in - Login username already connected."; // Example string
                     msg = createErrorPacket(str , 7);
                     break;
                 }
-                msg = createACKPacket(0);
+                short block = 0;
+                msg = createACKPacket(block);
                 break;
             case 8:
                 
@@ -55,6 +56,10 @@ public class ServerActions {
             case 10:
                 
                 break; 
+            default:
+                String errorMsg = "Illegal TFTP operation - Unknown Opcode.";
+                msg = createErrorPacket(errorMsg, 4);
+                break;
         }
     }
 
@@ -88,12 +93,14 @@ public class ServerActions {
         return result;
     }
 
-    public byte[] createACKPacket(int block)
+    public byte[] createACKPacket(short block)
     {
-        byte [] opCodeBytes = new byte []{( byte ) (4 >> 8) , ( byte ) (4 & 0xff)};
+        short ackCode = 4;
+        byte [] opCodeBytes = new byte []{( byte ) (ackCode >> 8) , ( byte ) (ackCode & 0xff)};
         byte [] blockNumberBytes = new byte []{( byte ) (block >> 8) , ( byte ) (block & 0xff)};
         byte[] result = Arrays.copyOf(opCodeBytes, opCodeBytes.length+blockNumberBytes.length);
         System.arraycopy(blockNumberBytes, 0, result, opCodeBytes.length, blockNumberBytes.length);
+        System.out.println("Created ACK Packet");
         return result;
     }
 }

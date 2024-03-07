@@ -1,6 +1,7 @@
 package bgu.spl.net.impl.tftp;
 
 import bgu.spl.net.api.BidiMessagingProtocol;
+import bgu.spl.net.srv.ConnectionHandler;
 import bgu.spl.net.srv.Connections;
 import bgu.spl.net.srv.ServerActions;
 import bgu.spl.net.srv.ServerData;
@@ -29,13 +30,15 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     {
         byte [] b = new byte []{message[0] , message[1]};
         short b_short = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) );
-        this.action.act(b_short , message); 
+        this.action.act(b_short , message);
+        this.connections.send(this.connectionId, message); 
+        System.out.println("Sent answer to client");
+
     }
 
     @Override
     public boolean shouldTerminate() {
-        // TODO implement this
-        throw new UnsupportedOperationException("Unimplemented method 'shouldTerminate'");
+        return (this.serverData.hadDisconnected(this.connectionId));
     } 
 
     public int getConnectionID()
@@ -46,5 +49,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     public Connections<byte[]> getConnection()
     {
         return this.connections;
-    }   
+    }
+
+    
 }

@@ -10,7 +10,7 @@ public class TftpServer {
         Server.threadPerClient(
                 7777, //port
                 () -> new TftpProtocol(serverData), //protocol factory
-                TftpEncoderDecoder::new 
+                TftpEncoderDecoder::new, serverData 
         ).serve();
     }
 }

@@ -13,7 +13,8 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
     @Override
     public byte[] decodeNextByte(byte nextByte)
     {
-        if (nextByte == 0) {
+        byte lastByte = 0; 
+        if (len >= 2 && nextByte == lastByte) {
             return popBytes();
         }
 
@@ -33,7 +34,8 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
     public byte[] encode(byte[] message)
     {
         byte[] ans = Arrays.copyOf(message , message.length+1);
-        ans[ans.length-1] = 0;
+        byte lastByte = 0;
+        ans[ans.length-1] = lastByte;
 
         return  ans;
     }
