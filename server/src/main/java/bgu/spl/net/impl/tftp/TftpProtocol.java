@@ -30,7 +30,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     {
         byte [] b = new byte []{message[0] , message[1]};
         short b_short = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) );
-        this.action.act(b_short , message);
+        message = this.action.act(b_short , message);
         this.connections.send(this.connectionId, message); 
         System.out.println("Sent answer to client");
 

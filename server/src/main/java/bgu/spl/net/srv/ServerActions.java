@@ -15,7 +15,7 @@ public class ServerActions {
         this.serverData = serverData;
     }
 
-    public void act(short opCode, byte[] msg)
+    public byte[] act(short opCode, byte[] msg)
     {
         switch (opCode) {
             case 1:
@@ -41,7 +41,8 @@ public class ServerActions {
                 if(!this.serverData.logInOrRegister(userName))
                 {
                     String str = "User already logged in - Login username already connected."; // Example string
-                    msg = createErrorPacket(str , 7);
+                    short errorCode = 7;
+                    msg = createErrorPacket(str , errorCode);
                     break;
                 }
                 short block = 0;
@@ -61,6 +62,7 @@ public class ServerActions {
                 msg = createErrorPacket(errorMsg, 4);
                 break;
         }
+        return msg;
     }
 
     public String getUserName(byte[] msg)
@@ -89,7 +91,7 @@ public class ServerActions {
         System.arraycopy(errorMsgBytes, 0, result, offset, errorMsgBytes.length);
         offset += errorMsgBytes.length;
         System.arraycopy(lastByte, 0, result, offset, lastByte.length);
-        
+        System.out.println("Created Error packet: ");
         return result;
     }
 
@@ -100,7 +102,7 @@ public class ServerActions {
         byte [] blockNumberBytes = new byte []{( byte ) (block >> 8) , ( byte ) (block & 0xff)};
         byte[] result = Arrays.copyOf(opCodeBytes, opCodeBytes.length+blockNumberBytes.length);
         System.arraycopy(blockNumberBytes, 0, result, opCodeBytes.length, blockNumberBytes.length);
-        System.out.println("Created ACK Packet");
+        System.out.println("Created ACK Packet:" + result[0] + "," + result[1] + "," + result[2] + "," + result[3]);
         return result;
     }
 }

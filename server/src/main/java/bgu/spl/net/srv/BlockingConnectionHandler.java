@@ -44,7 +44,6 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
                 {
                     System.out.println("Got message from client: " + this.connectionId);
                     this.protocol.process(nextMessage);
-                    nextMessage = null;
                 }
             }
 
