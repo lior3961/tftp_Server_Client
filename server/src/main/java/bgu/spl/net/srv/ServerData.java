@@ -6,16 +6,29 @@ public class ServerData {
 
     private ConcurrentHashMap<String, Boolean> users; // mapping each username to his login stae
     private ConcurrentHashMap<String, FileInputStream> files; // mapping each file name to his file path
+    private ConcurrentHashMap<Integer, String> idToUserName; // mapping each logged connectionid to his username 
     private Connections<byte[]> connections;
     
     public ServerData()
     {
         this.users = new ConcurrentHashMap<String, Boolean>();
         this.files = new ConcurrentHashMap<String, FileInputStream>();
-        this.connections = new ConnectionsImpl<>();
+        this.connections = new ConnectionsImpl<byte[]>();
+        idToUserName = new ConcurrentHashMap<Integer, String>();
     }
 
-    public boolean logInOrRegister(String userName) //true if logged in, false if ERROR
+    public void connect(int connectionId, ConnectionHandler<byte[]> ch)
+    {
+        this.connections.connect(connectionId, ch);
+    }
+
+    public void disconnect(int connectionId)
+    {
+        String userName = this.idToUserName.get(connectionId);
+        this.users.put(userName, false);
+    }
+
+    public boolean logInOrRegister(String userName, int connectionId) //true if logged in, false if ERROR
     {
         if(this.users.containsKey(userName))
         {
@@ -28,6 +41,7 @@ public class ServerData {
             }
         }
         this.users.put(userName, true); //log in or register
+        this.idToUserName.put(connectionId, userName);
         return true;
     }
     
@@ -59,9 +73,17 @@ public class ServerData {
 
     public boolean hadDisconnected(int connectionId) //false if logged in or hasn't logged in yet, true if disconnected
     {
-        Boolean status = this.users.get(connectionId); 
-        //returs null if the client is not in the dataStructure meaning he didn't logged in yet or not relevant anymore.
-        return ((status != null) && !status);
+        String userName = this.idToUserName.get(connectionId); //check if userName logged at least once
+        if(userName != null)
+        {
+            if(!this.users.get(userName))
+            {
+                this.connections.disconnect(connectionId);
+                this.idToUserName.remove(connectionId);
+                return true;
+            }
+        }
+        return false;
     }
     
 }

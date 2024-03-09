@@ -36,18 +36,19 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
             in = new BufferedInputStream(sock.getInputStream());
             out = new BufferedOutputStream(sock.getOutputStream());
             this.protocol.start(connectionId, serverData.getConnections());
-            this.serverData.getConnections().connect(connectionId,this);
+            this.serverData.connect(this.connectionId, this);
             System.out.println("Client: " + this.connectionId + " connected to the server");
             while (!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
                 byte[] nextMessage = encdec.decodeNextByte((byte) read);
                 if (nextMessage != null) 
                 {
                     System.out.println("Got message from client: " + this.connectionId);
+                    System.out.println("message: " + nextMessage);
                     this.protocol.process(nextMessage);
                 }
             }
 
-        } catch (IOException ex) {
+        } catch (IOException ex) { //where user close terminal
             ex.printStackTrace();
         }
 
@@ -66,6 +67,7 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
         {
             out.write(encdec.encode(msg));
             out.flush();
+            System.out.println("Sent answer to client from buffer");
         } catch(IOException ex)
         {
             ex.printStackTrace();

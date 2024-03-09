@@ -36,8 +36,7 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
         byte[] ans = Arrays.copyOf(message , message.length+1);
         byte lastByte = 0;
         ans[ans.length-1] = lastByte;
-
-        return  ans;
+        return  message;
     }
 
     private byte[] popBytes()
