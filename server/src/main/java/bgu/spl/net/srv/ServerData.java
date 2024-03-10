@@ -54,9 +54,7 @@ public class ServerData {
 
     public boolean addFileToServer(String fileName)
     {
-        //implement
-        //
-        //check if client is logged in
+        this.files.add(fileName);
         return true;
     }
 

@@ -20,8 +20,8 @@ public class ServerActions {
     private int actionsCount;
     private Vector<Byte> dataBytes;
     private short blockNumber;
-    private String filesPath;
     private Path filePath;
+    private String fileName;
 
 
     public ServerActions(ServerData serverData, int connectionId)
@@ -31,9 +31,7 @@ public class ServerActions {
         this.actionsCount = 0;
         this.dataBytes = new Vector<Byte>();
         this.blockNumber = 1;
-        this.filesPath = "${workspaceFolder}/Flies";
-
-
+        this.fileName = "";
     }
 
     public byte[] act(short opCode, byte[] msg)
@@ -72,6 +70,7 @@ public class ServerActions {
                     break;
                 }
                 fileName = this.getName(msg);
+                this.fileName = fileName;
                 if(this.serverData.isFileExist(fileName))
                 {
                     errMsg = "File already exists - File name exists on WRQ.";
@@ -93,12 +92,16 @@ public class ServerActions {
                         {
                             bytesArr[i] = dataBytes.remove(0);
                         }
-                        FileOutputStream fos = new FileOutputStream(this.filesPath); //new file output stream with files path
+                        Path projectPath = Paths.get("").toAbsolutePath(); //put project path
+                        Path folderPath = projectPath.resolve("Flies"); // put folder path
+                        Path filePath = folderPath.resolve(this.fileName); //put new file name path
+                        FileOutputStream fos = new FileOutputStream(filePath.toString()); //new file output stream with file path
                         fos.write(bytesArr); //creating file
                         fos.close();
                         msg = createACKPacket(block);
                         this.dataBytes.clear(); //clear dataByts vector
                         this.blockNumber = 1;
+                        this.serverData.addFileToServer(this.fileName);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -124,7 +127,7 @@ public class ServerActions {
                 break;
             case 7:
                 String userName = this.getName(msg);
-                if(!this.serverData.logInOrRegister(userName,this.connectionId) && this.actionsCount >= 1)
+                if(!this.serverData.logInOrRegister(userName,this.connectionId) || this.actionsCount >= 1)
                 {
                     errMsg = "User already logged in - Login username already connected."; // Example string
                     errCode = 7;

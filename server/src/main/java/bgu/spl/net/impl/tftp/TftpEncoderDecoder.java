@@ -21,13 +21,19 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
             switch (opCode)
             {
                 case 3:
-                    if(len >= 6 && nextByte == lastByte)
+                    if(len >= 6)
                     {
-                        return popBytes();
+                        byte [] dataSizeByts = new byte []{bytes[2] , bytes[3]};       
+                        short dataSize = ( short ) ((( short ) dataSizeByts[0]) << 8 | ( short ) ( dataSizeByts[1]) ); //getting data size number from the array
+                        if(len == dataSize + 5)
+                        {
+                            pushByte(nextByte);
+                            return popBytes();
+                        }
                     }
                     break;
                 case 4:
-                    if(len >=4 && nextByte == lastByte)
+                    if(len == 4)
                     {
                         return popBytes();  
                     }
@@ -37,13 +43,25 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
                     {
                         return popBytes();  
                     } 
-                    break;                 
+                    break; 
+                case 6:
+                    if(len == 2)
+                    {
+                        return popBytes();
+                    } 
+                    break;               
                 case 9:
                     if(len >=3 && nextByte == lastByte)
                     {
                         return popBytes();  
                     }
-                    break;  
+                    break; 
+                case 10:
+                    if(len == 2)
+                    {
+                        return popBytes();
+                    }
+                    break;
                 default:
                     if(nextByte == lastByte)
                     {
