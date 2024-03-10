@@ -22,23 +22,25 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     public void start(int connectionId, Connections<byte[]> connections) {
         this.connectionId = connectionId;
         this.connections = connections;
-        this.action = new ServerActions(connections,this.serverData,this.connectionId);
+        this.action = new ServerActions(this.serverData,this.connectionId);
     }
 
     @Override
     public void process(byte[] message)
     {
-        byte [] b = new byte []{message[0] , message[1]};
+        byte [] b = new byte []{message[0] , message[1]};       
         short opCode = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) );
         message = this.action.act(opCode , message);
-        this.connections.send(this.connectionId, message); 
-        System.out.println("Sent answer to client from proccess");
-
+        if(message != null)
+        {
+            this.connections.send(this.connectionId, message); 
+            System.out.println("Sent answer to client from proccess");
+        }
     }
 
     @Override
     public boolean shouldTerminate() {
-        return (this.serverData.hadDisconnected(this.connectionId));
+        return (this.serverData.hadlogOuted(this.connectionId));
     } 
 
     public int getConnectionID()
@@ -51,5 +53,4 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
         return this.connections;
     }
 
-    
 }

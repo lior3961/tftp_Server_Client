@@ -42,8 +42,6 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
                 byte[] nextMessage = encdec.decodeNextByte((byte) read);
                 if (nextMessage != null) 
                 {
-                    System.out.println("Got message from client: " + this.connectionId);
-                    System.out.println("message: " + nextMessage);
                     this.protocol.process(nextMessage);
                 }
             }
@@ -51,12 +49,16 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
         } catch (IOException ex) { //where user close terminal
             ex.printStackTrace();
         }
+        finally
+        {
+            this.serverData.disconnectUser(connectionId);
+        }
 
     }
 
     @Override
     public void close() throws IOException {
-        this.serverData.getConnections().disconnect(this.connectionId);
+        this.serverData.disconnectUser(connectionId);
         connected = false;
         sock.close();
     }

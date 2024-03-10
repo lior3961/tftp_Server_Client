@@ -14,10 +14,43 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
     public byte[] decodeNextByte(byte nextByte)
     {
         byte lastByte = 0; 
-        if (len >= 2 && nextByte == lastByte) {
-            return popBytes();
+        if (len >= 2)
+        {
+            byte [] b = new byte []{bytes[0] , bytes[1]};       
+            short opCode = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) );
+            switch (opCode)
+            {
+                case 3:
+                    if(len >= 6 && nextByte == lastByte)
+                    {
+                        return popBytes();
+                    }
+                    break;
+                case 4:
+                    if(len >=4 && nextByte == lastByte)
+                    {
+                        return popBytes();  
+                    }
+                    break;
+                case 5:
+                    if(len >=4 && nextByte == lastByte)
+                    {
+                        return popBytes();  
+                    } 
+                    break;                 
+                case 9:
+                    if(len >=3 && nextByte == lastByte)
+                    {
+                        return popBytes();  
+                    }
+                    break;  
+                default:
+                    if(nextByte == lastByte)
+                    {
+                        return popBytes();
+                    }       
+            }
         }
-
         pushByte(nextByte);          
         return null;
     }

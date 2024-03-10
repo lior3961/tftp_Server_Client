@@ -1,20 +1,22 @@
 package bgu.spl.net.srv;
 import java.io.FileInputStream;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerData {
 
     private ConcurrentHashMap<String, Boolean> users; // mapping each username to his login stae
-    private ConcurrentHashMap<String, FileInputStream> files; // mapping each file name to his file path
+    private Vector<String> files; // mapping each file name to his file path
     private ConcurrentHashMap<Integer, String> idToUserName; // mapping each logged connectionid to his username 
     private Connections<byte[]> connections;
     
     public ServerData()
     {
         this.users = new ConcurrentHashMap<String, Boolean>();
-        this.files = new ConcurrentHashMap<String, FileInputStream>();
+        this.files = new Vector<String>();
         this.connections = new ConnectionsImpl<byte[]>();
-        idToUserName = new ConcurrentHashMap<Integer, String>();
+        this.idToUserName = new ConcurrentHashMap<Integer, String>();
+        //this.files.add("lemon.jpg");
     }
 
     public void connect(int connectionId, ConnectionHandler<byte[]> ch)
@@ -22,7 +24,7 @@ public class ServerData {
         this.connections.connect(connectionId, ch);
     }
 
-    public void disconnect(int connectionId)
+    public void logOut(int connectionId)
     {
         String userName = this.idToUserName.get(connectionId);
         this.users.put(userName, false);
@@ -47,15 +49,7 @@ public class ServerData {
     
     public boolean deleteFileFromServer(String fileName)
     {
-        if(!this.files.containsKey(fileName)) 
-        //*
-        //*
-        //check if the client is logged in
-        {
-            return false; //file doesn't exist
-        }
-        this.files.remove(fileName);
-        return true;  // file has deleted
+        return this.files.remove(fileName);
     }
 
     public boolean addFileToServer(String fileName)
@@ -71,7 +65,7 @@ public class ServerData {
         return this.connections;
     }
 
-    public boolean hadDisconnected(int connectionId) //false if logged in or hasn't logged in yet, true if disconnected
+    public boolean hadlogOuted(int connectionId) //false if logged in or hasn't logged in yet, true if logOuted
     {
         String userName = this.idToUserName.get(connectionId); //check if userName logged at least once
         if(userName != null)
@@ -85,5 +79,27 @@ public class ServerData {
         }
         return false;
     }
+
+    public void disconnectUser(int connectionId)
+    {
+        logOut(connectionId);
+        this.connections.disconnect(connectionId);
+        this.idToUserName.remove(connectionId);
+    }
+
+    public Boolean getUserStatus(int connectionId)
+    {
+        String userName = this.idToUserName.get(connectionId);
+        if(userName == null)
+        {
+            return false;
+        }
+        return this.users.get(userName);
+    }
+
+    public boolean isFileExist(String fileName)
+    {
+        return this.files.contains(fileName);
+    } 
     
 }
