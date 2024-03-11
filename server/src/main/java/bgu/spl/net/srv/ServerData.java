@@ -99,5 +99,10 @@ public class ServerData {
     {
         return this.files.contains(fileName);
     } 
+
+    public Vector<String> getFiles()
+    {
+        return this.files;
+    }
     
 }
