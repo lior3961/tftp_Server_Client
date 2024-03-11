@@ -25,6 +25,7 @@ public class ServerActions {
     private short blockNumber;
     private Path serverFilesFolderPath;
     private String fileName;
+    private byte needToBcast;
 
 
     public ServerActions(ServerData serverData, int connectionId)
@@ -36,6 +37,7 @@ public class ServerActions {
         this.blockNumber = 1;
         this.fileName = "";
         this.serverFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Flies");//get "Files" path
+        this.needToBcast = -1;
     }
 
     public byte[] act(short opCode, byte[] msg)
@@ -103,6 +105,7 @@ public class ServerActions {
                         this.dataBytes.clear(); //clear dataByts vector
                         this.blockNumber = 1;
                         this.serverData.addFileToServer(this.fileName);
+                        this.needToBcast = 1;
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -148,29 +151,27 @@ public class ServerActions {
                 msg = createACKPacket(block);
                 break;
             case 8:
-                if(!this.serverData.getUserStatus(connectionId))
+                if(!this.serverData.getUserStatus(connectionId)) //user login check
                 {
                     errMsg = "User not logged in - Any opcode received before Login completes.";
                     errCode = 6;
                     msg = createErrorPacket(errMsg,errCode);
                     break;
                 }
-                fileName = this.getName(msg);
-                if(this.serverData.deleteFileFromServer(fileName))
+                this.fileName = this.getName(msg);
+                if(this.serverData.deleteFileFromServer(this.fileName)) //check if file is exist , if true delete it.
                 {
-                    deleteFileFromServerFile(fileName);
+                    deleteFileFromServerFile(this.fileName);
                     block = 0;
-                    msg = createACKPacket(block);  
+                    msg = createACKPacket(block); 
+                    this.needToBcast = 0;
                 }
-                else
+                else //file doesnt exist
                 {
                     errMsg = "File not found - RRQ DELRQ of non-existing file.";
                     errCode = 1;
                     msg = createErrorPacket(errMsg,errCode); 
                 }                              
-                break;
-            case 9:
-                
                 break;
             case 10:
                 this.serverData.disconnectUser(this.connectionId);
@@ -315,6 +316,34 @@ public class ServerActions {
     {
         File file = this.serverFilesFolderPath.resolve(fileName).toFile();
         file.delete();
+    }
+
+    public byte[] createBcastPacket(byte addOrRemove)
+    {
+        short opCode = 9;
+        byte [] opCodeBytes = new byte []{( byte ) (opCode >> 8) , ( byte ) (opCode & 0xff)};
+        byte[] fileNameBytes = this.fileName.getBytes(StandardCharsets.UTF_8);
+        byte zero = 0;
+        byte[] result = new byte[opCodeBytes.length+1+fileNameBytes.length+1];
+        int offset = 0;
+        System.arraycopy(opCodeBytes, 0, result, offset, opCodeBytes.length);
+        offset += opCodeBytes.length;
+        result[2] = addOrRemove;
+        offset++;
+        System.arraycopy(fileNameBytes, 0, result, offset, fileNameBytes.length);
+        result[result.length-1] = zero;
+        return result;
+        
+    }
+
+    public byte getNeedToBcast()
+    {
+        return this.needToBcast;
+    }
+
+    public void doneBcast()
+    {
+        this.needToBcast = -1;
     }
 
  

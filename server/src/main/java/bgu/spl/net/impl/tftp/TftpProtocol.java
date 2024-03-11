@@ -10,7 +10,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
 
     private int connectionId;
     private Connections<byte[]> connections;
-    private ServerActions action;
+    private ServerActions serverActions;
     private ServerData serverData;
 
     public TftpProtocol(ServerData serverData)
@@ -22,7 +22,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     public void start(int connectionId, Connections<byte[]> connections) {
         this.connectionId = connectionId;
         this.connections = connections;
-        this.action = new ServerActions(this.serverData,this.connectionId);
+        this.serverActions = new ServerActions(this.serverData,this.connectionId);
     }
 
     @Override
@@ -30,10 +30,15 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     {
         byte [] b = new byte []{message[0] , message[1]};       
         short opCode = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) );
-        message = this.action.act(opCode , message);
+        message = this.serverActions.act(opCode , message);
         if(message != null)
         {
-            this.connections.send(this.connectionId, message); 
+            this.connections.send(this.connectionId, message);
+            if(this.serverActions.getNeedToBcast() != -1)
+            {
+               this.serverData.sendBcast(serverActions.createBcastPacket(this.serverActions.getNeedToBcast()));
+               this.serverActions.doneBcast();
+            }
             System.out.println("Sent answer to client from proccess");
         }
     }

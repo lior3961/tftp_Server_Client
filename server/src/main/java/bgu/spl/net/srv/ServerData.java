@@ -112,6 +112,14 @@ public class ServerData {
         return this.files;
     }
 
+    public void sendBcast(byte[] msg)
+    {
+        for (Integer connectionId : this.idToUserName.keySet())
+        {
+            this.connections.send(connectionId, msg);
+        }
+    }
+
     public static Vector<String> getFileList(String directoryPath) {
         Vector<String> fileList = new Vector<String>();
         File directory = new File(directoryPath);      
@@ -126,5 +134,6 @@ public class ServerData {
         }       
         return fileList;
     }
+
     
 }
