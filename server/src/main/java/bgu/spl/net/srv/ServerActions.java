@@ -20,7 +20,7 @@ public class ServerActions {
     private int actionsCount;
     private Vector<Byte> dataBytes;
     private short blockNumber;
-    private Path filePath;
+    private Path serverFilesFolderPath;
     private String fileName;
 
 
@@ -32,6 +32,7 @@ public class ServerActions {
         this.dataBytes = new Vector<Byte>();
         this.blockNumber = 1;
         this.fileName = "";
+        this.serverFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Flies");//get "Files" path
     }
 
     public byte[] act(short opCode, byte[] msg)
@@ -56,7 +57,7 @@ public class ServerActions {
                 }
                 else
                 {
-                    this.filePath = Paths.get(fileName);
+                    this.serverFilesFolderPath = Paths.get(fileName);
 
                     msg = createDataPacket();
                 }
@@ -92,10 +93,8 @@ public class ServerActions {
                         {
                             bytesArr[i] = dataBytes.remove(0);
                         }
-                        Path projectPath = Paths.get("").toAbsolutePath(); //put project path
-                        Path folderPath = projectPath.resolve("Flies"); // put folder path
-                        Path filePath = folderPath.resolve(this.fileName); //put new file name path
-                        FileOutputStream fos = new FileOutputStream(filePath.toString()); //new file output stream with file path
+                        Path newFile = this.serverFilesFolderPath.resolve(this.fileName); //put new file path
+                        FileOutputStream fos = new FileOutputStream(newFile.toString()); //new file output stream with file path
                         fos.write(bytesArr); //creating file
                         fos.close();
                         msg = createACKPacket(block);
@@ -217,7 +216,7 @@ public class ServerActions {
 
     public byte[] createDataPacket()
     { 
-        try (FileInputStream fileInputStream = new FileInputStream(this.filePath.toFile())) {
+        try (FileInputStream fileInputStream = new FileInputStream(this.serverFilesFolderPath.toFile())) {
             long startPosition = (blockNumber - 1) * 512; // Calculate the starting position
             fileInputStream.skip(startPosition); // Skip to the starting position
             byte[] buffer = new byte[512];
