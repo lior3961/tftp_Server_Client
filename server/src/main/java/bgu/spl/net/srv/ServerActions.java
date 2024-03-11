@@ -71,6 +71,7 @@ public class ServerActions {
                 else
                 {
                     this.identifier = 1;
+                    this.blockNumber = 1;
                     msg = createDataPacketRRQ();
                 }
                 break;
@@ -141,6 +142,7 @@ public class ServerActions {
                 else
                 {
                     this.identifier = 6;
+                    this.blockNumber = 1;
                     msg = createDirqDataPacket();
                 }
                 break;
@@ -251,11 +253,6 @@ public class ServerActions {
                 this.blockNumber ++;
                 return packet;
             }
-            else
-            {
-                this.blockNumber = 1;
-            }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
