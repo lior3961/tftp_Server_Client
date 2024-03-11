@@ -406,6 +406,7 @@ public class ServerActions {
     {
         if(delete)
         {
+            this.deleteFileFromServerFile(fileName);
             this.serverData.deleteFileFromServer(fileName);
             this.filesByts = vectorToBytes(this.serverData.getFiles());
         }
