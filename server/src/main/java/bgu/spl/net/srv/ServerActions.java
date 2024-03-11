@@ -30,6 +30,7 @@ public class ServerActions {
     private byte needToBcast;
     private byte[] filesByts;
     private int offset;
+    private int identifier;
 
 
     public ServerActions(ServerData serverData, int connectionId)
@@ -44,6 +45,7 @@ public class ServerActions {
         this.needToBcast = -1;
         this.filesByts = vectorToBytes(this.serverData.getFiles());
         this.offset = 0;
+        this.identifier = 1;
     }
 
     public byte[] act(short opCode, byte[] msg)
@@ -68,11 +70,8 @@ public class ServerActions {
                 }
                 else
                 {
+                    this.identifier = 1;
                     msg = createDataPacketRRQ();
-                    if(msg == null)
-                    {
-                        System.out.println("RRQ complete");
-                    }
                 }
                 break;
             case 2:
@@ -123,7 +122,11 @@ public class ServerActions {
                 msg = createACKPacket(block);
                 break;
             case 4:
-                    
+                msg = this.createDataPacket();
+                if(this.identifier == 1 && msg == null)
+                {
+                    System.out.println("RRQ complete");
+                }  
                 break;
             case 5:
                 
@@ -137,6 +140,7 @@ public class ServerActions {
                 }   
                 else
                 {
+                    this.identifier = 6;
                     msg = createDirqDataPacket();
                 }
                 break;
@@ -279,10 +283,15 @@ public class ServerActions {
     
     public byte[] createDirqDataPacket()
     { 
+        if(this.offset == this.filesByts.length)
+        {
+            this.offset = 0;
+            return null;
+        }
         short opcode = 3;
         short block = this.blockNumber;
         short dataSize;
-        if(this.filesByts.length >= 512)
+        if(this.filesByts.length - offset >= 512)
         {
             dataSize = 512;
         }
@@ -294,17 +303,18 @@ public class ServerActions {
         byte [] dataSizeBytes = new byte []{( byte ) (dataSize >> 8) , ( byte ) (dataSize & 0xff)};
         byte [] blockBytes = new byte []{( byte ) (block >> 8) , ( byte ) (block & 0xff)};
         byte [] result = new byte[6+dataSize];
-        int offset = 0;
-        System.arraycopy(opCodeBytes, 0, result, offset, opCodeBytes.length);
-        offset += opCodeBytes.length;
-        System.arraycopy(dataSizeBytes, 0, result, offset, dataSizeBytes.length);
-        offset += dataSizeBytes.length;
-        System.arraycopy(blockBytes, 0, result, offset, blockBytes.length);
+        int arrayoffset = 0;
+        System.arraycopy(opCodeBytes, 0, result, arrayoffset, opCodeBytes.length);
+        arrayoffset += opCodeBytes.length;
+        System.arraycopy(dataSizeBytes, 0, result, arrayoffset, dataSizeBytes.length);
+        arrayoffset += dataSizeBytes.length;
+        System.arraycopy(blockBytes, 0, result, arrayoffset, blockBytes.length);
         for(int i = 6 ; i < dataSize ; i++)
         {
             result[i] = this.filesByts[this.offset];
-            offset++;
+            this.offset++;
         }
+        this.blockNumber++;
         return result;
     }
 
@@ -374,6 +384,18 @@ public class ServerActions {
         }
 
         return result;
+    }
+
+    public byte[] createDataPacket()
+    {
+        if(this.identifier == 1)
+        {
+            return createDataPacketRRQ();
+        }
+        else
+        {
+            return createDirqDataPacket();
+        }
     }
 }
 
