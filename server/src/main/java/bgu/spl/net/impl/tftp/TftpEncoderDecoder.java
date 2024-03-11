@@ -17,14 +17,14 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
         if (len >= 2)
         {
             byte [] b = new byte []{bytes[0] , bytes[1]};       
-            short opCode = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) );
+            short opCode = arrayToShort(b);
             switch (opCode)
             {
                 case 3:
                     if(len >= 6)
                     {
                         byte [] dataSizeByts = new byte []{bytes[2] , bytes[3]};       
-                        short dataSize = ( short ) ((( short ) dataSizeByts[0]) << 8 | ( short ) ( dataSizeByts[1]) ); //getting data size number from the array
+                        short dataSize = arrayToShort(dataSizeByts); //getting data size number from the array
                         if(len == dataSize + 5)
                         {
                             pushByte(nextByte);
@@ -62,7 +62,7 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
         if(len == 2)
         {
             byte [] b = new byte []{bytes[0] , bytes[1]};       
-            short opCode = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) );
+            short opCode = arrayToShort(b);
             if(opCode == 6 || opCode == 10)
             {
                 return popBytes();
@@ -90,5 +90,18 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
         byte[] result = Arrays.copyOf(bytes, len);   
         len = 0;
         return result;
+    }
+
+    public byte[] shortToArray(short num)
+    {
+        byte [] result = new byte []{( byte )( num >> 8) , ( byte ) ( num & 0xff ) };
+        return result;
+
+    }
+
+    public short arrayToShort(byte[] arr)
+    {
+        short b_short = (short) (((short) arr[0]) << 8 | (short) (arr[1]) & 0x00ff);
+        return b_short;
     }
 }

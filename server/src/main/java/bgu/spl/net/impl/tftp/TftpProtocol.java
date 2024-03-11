@@ -29,7 +29,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]>  {
     public void process(byte[] message)
     {
         byte [] b = new byte []{message[0] , message[1]};       
-        short opCode = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) );
+        short opCode = this.serverActions.arrayToShort(b);
         message = this.serverActions.act(opCode , message);
         if(message != null)
         {

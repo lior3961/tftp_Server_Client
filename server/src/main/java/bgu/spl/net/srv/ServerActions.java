@@ -97,26 +97,10 @@ public class ServerActions {
             case 3:
                 if(handleDataPacket(msg))
                 {
-                    try
-                    {
-                        block = this.blockNumber; //update block number
-                        byte[] bytesArr = new byte[this.dataBytes.size()];
-                        for(int i = 0 ; i < bytesArr.length ; i++) //moving the file bytes from the vector to an array
-                        {
-                            bytesArr[i] = dataBytes.remove(0);
-                        }
-                        Path newFile = this.serverFilesFolderPath.resolve(this.fileName); //put new file path
-                        FileOutputStream fos = new FileOutputStream(newFile.toString()); //new file output stream with file path
-                        fos.write(bytesArr); //creating file
-                        fos.close();
-                        msg = createACKPacket(block);
-                        this.dataBytes.clear(); //clear dataByts vector
-                        this.blockNumber = 1;
-                        updateFiles(this.fileName,false);
-                        this.needToBcast = 1;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    msg = createACKPacket(this.blockNumber);
+                    updateFiles(this.fileName,false);
+                    this.blockNumber = 1;
+                    this.needToBcast = 1;
                     break;
                 }
                 block = this.blockNumber;
@@ -189,7 +173,7 @@ public class ServerActions {
                     msg = createErrorPacket(errMsg,errCode);
                     break;
                 }
-                this.serverData.disconnectUser(this.connectionId);
+                this.serverData.logOut(this.connectionId);
                 block = 0;
                 msg = createACKPacket(block);
                 break; 
@@ -211,8 +195,8 @@ public class ServerActions {
     public byte[] createErrorPacket(String errorMsg, short errorCode)
     {
         short opCode = 5;
-        byte [] opCodeBytes = new byte []{( byte ) (opCode >> 8) , ( byte ) (opCode & 0xff)};
-        byte [] errorCodeBytes = new byte []{( byte ) (errorCode >> 8) , ( byte ) (errorCode & 0xff)};
+        byte [] opCodeBytes = shortToArray(opCode);
+        byte [] errorCodeBytes = shortToArray(errorCode);
         byte[] errorMsgBytes = errorMsg.getBytes(StandardCharsets.UTF_8);
         byte lastByteShort = 0; 
         int totalLength = opCodeBytes.length + errorCodeBytes.length + errorMsgBytes.length + 1;
@@ -236,8 +220,8 @@ public class ServerActions {
     {
         this.actionsCount++;
         short ackCode = 4;
-        byte [] opCodeBytes = new byte []{( byte ) (ackCode >> 8) , ( byte ) (ackCode & 0xff)};
-        byte [] blockNumberBytes = new byte []{( byte ) (block >> 8) , ( byte ) (block & 0xff)};
+        byte [] opCodeBytes = shortToArray(ackCode);
+        byte [] blockNumberBytes = shortToArray(block);
         byte[] result = Arrays.copyOf(opCodeBytes, opCodeBytes.length+blockNumberBytes.length);
         System.arraycopy(blockNumberBytes, 0, result, opCodeBytes.length, blockNumberBytes.length);
         //System.out.println("Created ACK Packet:" + result[0] + "," + result[1] + "," + result[2] + "," + result[3]);
@@ -270,13 +254,20 @@ public class ServerActions {
     public boolean handleDataPacket(byte[] msg)
     {
         byte [] b = new byte []{msg[2] , msg[3]};       
-        short dataSize = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) ); //getting data size number from the array
+        short dataSize = arrayToShort(b); //getting data size number from the array
         b = new byte []{msg[4] , msg[5]};       
-        this.blockNumber = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) ); //getting block number from the array
+        this.blockNumber = arrayToShort(b); //getting block number from the array
         byte[] data = Arrays.copyOfRange(msg, 6, msg.length); //copy data byts into array
-        for(int i = 0 ; i < data.length ; i++)
+        try 
         {
-            this.dataBytes.add(data[i]);
+            Path newFile = this.serverFilesFolderPath.resolve(this.fileName); //put new file path
+            FileOutputStream fos = new FileOutputStream(newFile.toString(),true); //new file output stream with file path
+            fos.write(data); //creating file
+            fos.close();
+        }
+        catch (IOException ex)
+        {
+            ex.printStackTrace();
         }
         if(dataSize == 512) // check if block number is maximum for waiting to another block
         {
@@ -303,9 +294,9 @@ public class ServerActions {
         {
             dataSize = (short)this.filesByts.length;
         }
-        byte [] opCodeBytes = new byte []{( byte ) (opcode >> 8) , ( byte ) (opcode & 0xff)};
-        byte [] dataSizeBytes = new byte []{( byte ) (dataSize >> 8) , ( byte ) (dataSize & 0xff)};
-        byte [] blockBytes = new byte []{( byte ) (block >> 8) , ( byte ) (block & 0xff)};
+        byte [] opCodeBytes = shortToArray(opcode);
+        byte [] dataSizeBytes = shortToArray(dataSize);
+        byte [] blockBytes = shortToArray(block);
         byte [] result = new byte[6+dataSize];
         int arrayoffset = 0;
         System.arraycopy(opCodeBytes, 0, result, arrayoffset, opCodeBytes.length);
@@ -325,9 +316,9 @@ public class ServerActions {
     public void codesOfDataPacket(byte[] packet , short blockSize)
     {
         short opCode = 3;
-        byte [] opBytes = new byte []{( byte ) (opCode >> 8) , ( byte ) (opCode & 0xff)};
-        byte [] blockBytes = new byte []{( byte ) (this.blockNumber >> 8) , ( byte ) (this.blockNumber & 0xff)};
-        byte [] sizeBytes = new byte []{( byte ) (blockSize >> 8) , ( byte ) (blockSize & 0xff)};
+        byte [] opBytes = shortToArray(opCode);
+        byte [] blockBytes = shortToArray(this.blockNumber);
+        byte [] sizeBytes = shortToArray(blockSize);
         packet[0] = opBytes[0];
         packet[1] = opBytes[1];
         packet[2] = sizeBytes[0];
@@ -345,7 +336,7 @@ public class ServerActions {
     public byte[] createBcastPacket(byte addOrRemove)
     {
         short opCode = 9;
-        byte [] opCodeBytes = new byte []{( byte ) (opCode >> 8) , ( byte ) (opCode & 0xff)};
+        byte [] opCodeBytes = shortToArray(opCode);
         byte[] fileNameBytes = this.fileName.getBytes(StandardCharsets.UTF_8);
         byte zero = 0;
         byte[] result = new byte[opCodeBytes.length+1+fileNameBytes.length+1];
@@ -415,6 +406,19 @@ public class ServerActions {
             this.serverData.addFileToServer(fileName);
             this.filesByts = vectorToBytes(this.serverData.getFiles());
         }
+    }
+
+    public byte[] shortToArray(short num)
+    {
+        byte [] result = new byte []{( byte )( num >> 8) , ( byte ) ( num & 0xff ) };
+        return result;
+
+    }
+
+    public short arrayToShort(byte[] arr)
+    {
+        short b_short = (short) (((short) arr[0]) << 8 | (short) (arr[1]) & 0x00ff);
+        return b_short;
     }
 }
 
