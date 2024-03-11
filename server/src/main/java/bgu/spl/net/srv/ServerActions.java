@@ -8,6 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Vector;
+
+import javax.swing.text.html.HTMLDocument.Iterator;
+
 import java.io.*;
 import java.net.*;
 import java.nio.file.*;
@@ -60,7 +63,7 @@ public class ServerActions {
                 {
                     this.filePath = Paths.get(fileName);
 
-                    msg = createDataPacket();
+                    msg = createDataPacketRRQ();
                 }
                 break;
             case 2:
@@ -108,7 +111,7 @@ public class ServerActions {
                 msg = createACKPacket(block);
                 break;
             case 4:
-                byte[] packet = createDataPacket();
+                byte[] packet = createDataPacketRRQ();
                 if(packet == null)
                 {
                     System.out.println("RRQ complete");
@@ -120,7 +123,16 @@ public class ServerActions {
                 
                 break;
             case 6:
-                
+                if(!this.serverData.getUserStatus(connectionId))
+                {
+                    errMsg = "User not logged in - Any opcode received before Login completes.";
+                    errCode = 6;
+                    msg = createErrorPacket(errMsg,errCode);
+                }   
+                else
+                {
+                    msg = createDirqPacket();
+                }
                 break;
             case 7:
                 String userName = this.getName(msg);
@@ -212,17 +224,18 @@ public class ServerActions {
         return result;
     }
 
-    public byte[] createDataPacket()
+    public byte[] createDataPacketRRQ()
     { 
         try (FileInputStream fileInputStream = new FileInputStream(this.filePath.toFile())) {
             long startPosition = (blockNumber - 1) * 512; // Calculate the starting position
             fileInputStream.skip(startPosition); // Skip to the starting position
-            byte[] buffer = new byte[512];
-            int bytesRead = fileInputStream.read(buffer); // Read 512 bytes from the file
+            byte[] buffer = new byte[506];
+            int bytesRead = fileInputStream.read(buffer); // Read 506 bytes from the file
             if (bytesRead != -1) 
             {
-                byte[] packet = new byte[bytesRead];
-                System.arraycopy(buffer, 0, packet, 0, bytesRead);
+                byte[] packet = new byte[bytesRead + 6];
+                codesOfDataPacket(packet , (short) bytesRead);
+                System.arraycopy(buffer, 0, packet, 6, bytesRead);
                 this.blockNumber++;
                 return packet;
             }
@@ -255,6 +268,44 @@ public class ServerActions {
         }
         return true;
     }
+    
+    public byte[] createDirqPacket()
+    { 
+        Vector<Byte> packet2 = new Vector<Byte>();
+        Vector<String> files = this.serverData.getFiles();
+        for(int i = 0; i < files.size(); i++)
+        {
+            byte[] toAdd = files.get(i).getBytes(StandardCharsets.UTF_8);
+            for(int j = 0; j < toAdd.length; j++)
+            {
+                packet2.add(toAdd[i]);
+            }
+            byte zero = 0;
+            packet2.add(zero);
+        }
+        byte[] packet = new byte[6 + packet2.size()];
+        codesOfDataPacket(packet , (short) packet2.size());
+        for(int i = 6; i < packet.length; i++)
+        {
+            packet[i] = packet2.get(i);
+        }
+        return packet;
+    }
+
+    public void codesOfDataPacket(byte[] packet , short blockSize)
+    {
+        short opCode = 3;
+        byte [] opBytes = new byte []{( byte ) (opCode >> 8) , ( byte ) (opCode & 0xff)};
+        byte [] blockBytes = new byte []{( byte ) (this.blockNumber >> 8) , ( byte ) (this.blockNumber & 0xff)};
+        byte [] sizeBytes = new byte []{( byte ) (blockSize >> 8) , ( byte ) (blockSize & 0xff)};
+        packet[0] = opBytes[0];
+        packet[1] = opBytes[1];
+        packet[2] = blockBytes[0];
+        packet[3] = blockBytes[1];
+        packet[4] = sizeBytes[0];
+        packet[5] = sizeBytes[1];
+    }
+
  
 }
 
