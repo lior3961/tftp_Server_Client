@@ -248,10 +248,10 @@ public class ServerActions {
     { 
         try (FileInputStream fileInputStream = new FileInputStream(this.serverFilesFolderPath.resolve
         (this.fileName).toFile())) {
-            long startPosition = (blockNumber - 1) * 506; // Calculate the starting position
+            long startPosition = (blockNumber - 1) * 512; // Calculate the starting position
             fileInputStream.skip(startPosition); // Skip to the starting position
-            byte[] buffer = new byte[506];
-            int bytesRead = fileInputStream.read(buffer); // Read 506 bytes from the file
+            byte[] buffer = new byte[512];
+            int bytesRead = fileInputStream.read(buffer); // Read 512 bytes from the file
             if (bytesRead != -1) 
             {
                 byte[] packet = new byte[bytesRead + 6];
