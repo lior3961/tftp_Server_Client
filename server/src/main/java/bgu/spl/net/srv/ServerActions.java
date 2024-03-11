@@ -29,6 +29,7 @@ public class ServerActions {
     private String fileName;
     private byte needToBcast;
     private byte[] filesByts;
+    private int offset;
 
 
     public ServerActions(ServerData serverData, int connectionId)
@@ -42,6 +43,7 @@ public class ServerActions {
         this.serverFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Flies");//get "Files" path
         this.needToBcast = -1;
         this.filesByts = vectorToBytes(this.serverData.getFiles());
+        this.offset = 0;
     }
 
     public byte[] act(short opCode, byte[] msg)
@@ -290,7 +292,22 @@ public class ServerActions {
         {
             dataSize = (short)this.filesByts.length;
         }
-        return null;
+        byte [] opCodeBytes = new byte []{( byte ) (opcode >> 8) , ( byte ) (opcode & 0xff)};
+        byte [] dataSizeBytes = new byte []{( byte ) (dataSize >> 8) , ( byte ) (dataSize & 0xff)};
+        byte [] blockBytes = new byte []{( byte ) (block >> 8) , ( byte ) (block & 0xff)};
+        byte [] result = new byte[6+dataSize];
+        int offset = 0;
+        System.arraycopy(opCodeBytes, 0, result, offset, opCodeBytes.length);
+        offset += opCodeBytes.length;
+        System.arraycopy(dataSizeBytes, 0, result, offset, dataSizeBytes.length);
+        offset += dataSizeBytes.length;
+        System.arraycopy(blockBytes, 0, result, offset, blockBytes.length);
+        for(int i = 6 ; i < dataSize ; i++)
+        {
+            result[i] = this.filesByts[this.offset];
+            offset++;
+        }
+        return result;
     }
 
     public void codesOfDataPacket(byte[] packet , short blockSize)
