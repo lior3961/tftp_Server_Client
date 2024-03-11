@@ -111,7 +111,7 @@ public class ServerActions {
                         msg = createACKPacket(block);
                         this.dataBytes.clear(); //clear dataByts vector
                         this.blockNumber = 1;
-                        this.serverData.addFileToServer(this.fileName);
+                        updateFiles(this.fileName,false);
                         this.needToBcast = 1;
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -167,10 +167,10 @@ public class ServerActions {
                 this.fileName = this.getName(msg);
                 if(this.serverData.deleteFileFromServer(this.fileName)) //check if file is exist , if true delete it.
                 {
-                    deleteFileFromServerFile(this.fileName);
                     block = 0;
                     msg = createACKPacket(block); 
                     this.needToBcast = 0;
+                    updateFiles(this.fileName, true);
                 }
                 else //file doesnt exist
                 {
@@ -180,6 +180,13 @@ public class ServerActions {
                 }                              
                 break;
             case 10:
+                if(!this.serverData.getUserStatus(connectionId)) //user login check
+                {
+                    errMsg = "User not logged in - Any opcode received before Login completes.";
+                    errCode = 6;
+                    msg = createErrorPacket(errMsg,errCode);
+                    break;
+                }
                 this.serverData.disconnectUser(this.connectionId);
                 block = 0;
                 msg = createACKPacket(block);
@@ -309,7 +316,7 @@ public class ServerActions {
         System.arraycopy(dataSizeBytes, 0, result, arrayoffset, dataSizeBytes.length);
         arrayoffset += dataSizeBytes.length;
         System.arraycopy(blockBytes, 0, result, arrayoffset, blockBytes.length);
-        for(int i = 6 ; i < dataSize ; i++)
+        for(int i = 6 ; i < result.length ; i++)
         {
             result[i] = this.filesByts[this.offset];
             this.offset++;
@@ -377,7 +384,7 @@ public class ServerActions {
             byte zero = 0;
             byteList.add(zero);
         }
-
+        byteList.remove(byteList.size()-1);
         byte[] result = new byte[byteList.size()];
         for (int i = 0; i < byteList.size(); i++) {
             result[i] = byteList.get(i);
@@ -395,6 +402,20 @@ public class ServerActions {
         else
         {
             return createDirqDataPacket();
+        }
+    }
+
+    public void updateFiles(String fileName, boolean delete)
+    {
+        if(delete)
+        {
+            this.serverData.deleteFileFromServer(fileName);
+            this.filesByts = vectorToBytes(this.serverData.getFiles());
+        }
+        else
+        {
+            this.serverData.addFileToServer(fileName);
+            this.filesByts = vectorToBytes(this.serverData.getFiles());
         }
     }
 }
