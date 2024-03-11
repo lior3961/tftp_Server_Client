@@ -41,7 +41,7 @@ public class ServerActions {
     public byte[] act(short opCode, byte[] msg)
     {
         short block , errCode;
-        String errMsg , fileName; 
+        String errMsg; 
         switch (opCode) {
             case 1:
                 if(!this.serverData.getUserStatus(connectionId))
@@ -51,8 +51,8 @@ public class ServerActions {
                     msg = createErrorPacket(errMsg,errCode);
                     break;
                 }
-                fileName = this.getName(msg);
-                if(!this.serverData.isFileExist(fileName))
+                this.fileName = this.getName(msg);
+                if(!this.serverData.isFileExist(this.fileName))
                 {
                     errMsg = "File not found - RRQ DELRQ of non-existing file.";
                     errCode = 1;
@@ -60,7 +60,7 @@ public class ServerActions {
                 }
                 else
                 {
-                    this.serverFilesFolderPath = Paths.get(fileName);
+                    this.serverFilesFolderPath = Paths.get(this.fileName);
 
                     msg = createDataPacketRRQ();
                 }
@@ -73,9 +73,8 @@ public class ServerActions {
                     msg = createErrorPacket(errMsg,errCode);
                     break;
                 }
-                fileName = this.getName(msg);
-                this.fileName = fileName;
-                if(this.serverData.isFileExist(fileName))
+                this.fileName = this.getName(msg);
+                if(this.serverData.isFileExist(this.fileName))
                 {
                     errMsg = "File already exists - File name exists on WRQ.";
                     errCode = 6;
@@ -231,7 +230,8 @@ public class ServerActions {
 
     public byte[] createDataPacketRRQ()
     { 
-        try (FileInputStream fileInputStream = new FileInputStream(this.serverFilesFolderPath.toFile())) {
+        try (FileInputStream fileInputStream = new FileInputStream(this.serverFilesFolderPath.resolve
+        (this.fileName).toFile())) {
             long startPosition = (blockNumber - 1) * 512; // Calculate the starting position
             fileInputStream.skip(startPosition); // Skip to the starting position
             byte[] buffer = new byte[506];
