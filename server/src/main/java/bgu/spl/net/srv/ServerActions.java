@@ -159,6 +159,7 @@ public class ServerActions {
                 fileName = this.getName(msg);
                 if(this.serverData.deleteFileFromServer(fileName))
                 {
+                    deleteFileFromServerFile(fileName);
                     block = 0;
                     msg = createACKPacket(block);  
                 }
@@ -173,7 +174,9 @@ public class ServerActions {
                 
                 break;
             case 10:
-                
+                this.serverData.disconnectUser(this.connectionId);
+                block = 0;
+                msg = createACKPacket(block);
                 break; 
             default:
                 errMsg = "Illegal TFTP operation - Unknown Opcode.";
@@ -306,6 +309,12 @@ public class ServerActions {
         packet[3] = blockBytes[1];
         packet[4] = sizeBytes[0];
         packet[5] = sizeBytes[1];
+    }
+
+    public void deleteFileFromServerFile(String fileName)
+    {
+        File file = this.serverFilesFolderPath.resolve(fileName).toFile();
+        file.delete();
     }
 
  

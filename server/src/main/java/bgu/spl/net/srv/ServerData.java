@@ -1,5 +1,10 @@
 package bgu.spl.net.srv;
+import java.io.File;
 import java.io.FileInputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,6 +21,8 @@ public class ServerData {
         this.files = new Vector<String>();
         this.connections = new ConnectionsImpl<byte[]>();
         this.idToUserName = new ConcurrentHashMap<Integer, String>();
+        Path serverFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Flies");//get "Files" path
+        this.files = getFileList(serverFilesFolderPath.toString());
         //this.files.add("lemon.jpg");
     }
 
@@ -103,6 +110,21 @@ public class ServerData {
     public Vector<String> getFiles()
     {
         return this.files;
+    }
+
+    public static Vector<String> getFileList(String directoryPath) {
+        Vector<String> fileList = new Vector<String>();
+        File directory = new File(directoryPath);      
+        File[] files = directory.listFiles();
+        if (files != null)
+        {
+            for (File file : files) {
+                if (file.isFile()) {
+                    fileList.add(file.getName());
+                }
+            }
+        }       
+        return fileList;
     }
     
 }
