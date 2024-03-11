@@ -121,10 +121,7 @@ public class ServerActions {
                 msg = createACKPacket(block);
                 break;
             case 4:
-                this.blockNumber = ( short ) ((( short ) msg [2]) << 8 | ( short ) ( msg [3]) );
-                this.blockNumber++;
-                short opCode1 = 1;
-                this.act(opCode1, msg);
+                    
                 break;
             case 5:
                 
@@ -245,6 +242,7 @@ public class ServerActions {
                 byte[] packet = new byte[bytesRead + 6];
                 codesOfDataPacket(packet , (short) bytesRead);
                 System.arraycopy(buffer, 0, packet, 6, bytesRead);
+                this.blockNumber ++;
                 return packet;
             }
             else
