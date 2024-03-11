@@ -60,8 +60,6 @@ public class ServerActions {
                 }
                 else
                 {
-                    this.serverFilesFolderPath = Paths.get(this.fileName);
-
                     msg = createDataPacketRRQ();
                 }
                 break;
@@ -232,7 +230,7 @@ public class ServerActions {
     { 
         try (FileInputStream fileInputStream = new FileInputStream(this.serverFilesFolderPath.resolve
         (this.fileName).toFile())) {
-            long startPosition = (blockNumber - 1) * 512; // Calculate the starting position
+            long startPosition = (blockNumber - 1) * 506; // Calculate the starting position
             fileInputStream.skip(startPosition); // Skip to the starting position
             byte[] buffer = new byte[506];
             int bytesRead = fileInputStream.read(buffer); // Read 506 bytes from the file
@@ -305,10 +303,10 @@ public class ServerActions {
         byte [] sizeBytes = new byte []{( byte ) (blockSize >> 8) , ( byte ) (blockSize & 0xff)};
         packet[0] = opBytes[0];
         packet[1] = opBytes[1];
-        packet[2] = blockBytes[0];
-        packet[3] = blockBytes[1];
-        packet[4] = sizeBytes[0];
-        packet[5] = sizeBytes[1];
+        packet[2] = sizeBytes[0];
+        packet[3] = sizeBytes[1];
+        packet[4] = blockBytes[0];
+        packet[5] = blockBytes[1];
     }
 
     public void deleteFileFromServerFile(String fileName)
