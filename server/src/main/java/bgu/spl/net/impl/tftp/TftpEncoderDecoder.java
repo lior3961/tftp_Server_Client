@@ -33,8 +33,9 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
                     }
                     break;
                 case 4:
-                    if(len == 4)
+                    if(len == 3)
                     {
+                        pushByte(nextByte);
                         return popBytes();  
                     }
                     break;
