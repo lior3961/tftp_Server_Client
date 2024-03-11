@@ -8,6 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Vector;
+import java.util.List;
+import java.util.ArrayList;
 
 import javax.swing.text.html.HTMLDocument.Iterator;
 
@@ -26,6 +28,7 @@ public class ServerActions {
     private Path serverFilesFolderPath;
     private String fileName;
     private byte needToBcast;
+    private byte[] filesByts;
 
 
     public ServerActions(ServerData serverData, int connectionId)
@@ -38,6 +41,7 @@ public class ServerActions {
         this.fileName = "";
         this.serverFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Flies");//get "Files" path
         this.needToBcast = -1;
+        this.filesByts = vectorToBytes(this.serverData.getFiles());
     }
 
     public byte[] act(short opCode, byte[] msg)
@@ -63,6 +67,10 @@ public class ServerActions {
                 else
                 {
                     msg = createDataPacketRRQ();
+                    if(msg == null)
+                    {
+                        System.out.println("RRQ complete");
+                    }
                 }
                 break;
             case 2:
@@ -113,13 +121,10 @@ public class ServerActions {
                 msg = createACKPacket(block);
                 break;
             case 4:
-                byte[] packet = createDataPacketRRQ();
-                if(packet == null)
-                {
-                    System.out.println("RRQ complete");
-                }
-                msg = packet; 
-                
+                this.blockNumber = ( short ) ((( short ) msg [2]) << 8 | ( short ) ( msg [3]) );
+                this.blockNumber++;
+                short opCode1 = 1;
+                this.act(opCode1, msg);
                 break;
             case 5:
                 
@@ -133,7 +138,7 @@ public class ServerActions {
                 }   
                 else
                 {
-                    msg = createDirqPacket();
+                    msg = createDirqDataPacket();
                 }
                 break;
             case 7:
@@ -240,7 +245,6 @@ public class ServerActions {
                 byte[] packet = new byte[bytesRead + 6];
                 codesOfDataPacket(packet , (short) bytesRead);
                 System.arraycopy(buffer, 0, packet, 6, bytesRead);
-                this.blockNumber++;
                 return packet;
             }
             else
@@ -273,27 +277,20 @@ public class ServerActions {
         return true;
     }
     
-    public byte[] createDirqPacket()
+    public byte[] createDirqDataPacket()
     { 
-        Vector<Byte> packet2 = new Vector<Byte>();
-        Vector<String> files = this.serverData.getFiles();
-        for(int i = 0; i < files.size(); i++)
+        short opcode = 3;
+        short block = this.blockNumber;
+        short dataSize;
+        if(this.filesByts.length >= 512)
         {
-            byte[] toAdd = files.get(i).getBytes(StandardCharsets.UTF_8);
-            for(int j = 0; j < toAdd.length; j++)
-            {
-                packet2.add(toAdd[i]);
-            }
-            byte zero = 0;
-            packet2.add(zero);
+            dataSize = 512;
         }
-        byte[] packet = new byte[6 + packet2.size()];
-        codesOfDataPacket(packet , (short) packet2.size());
-        for(int i = 6; i < packet.length; i++)
+        else
         {
-            packet[i] = packet2.get(i);
+            dataSize = (short)this.filesByts.length;
         }
-        return packet;
+        return null;
     }
 
     public void codesOfDataPacket(byte[] packet , short blockSize)
@@ -344,7 +341,25 @@ public class ServerActions {
         this.needToBcast = -1;
     }
 
- 
+    public static byte[] vectorToBytes(Vector<String> files)
+    {
+        List<Byte> byteList = new ArrayList<>();
+        for (String file : files) {
+            byte[] strBytes = file.getBytes(StandardCharsets.UTF_8);
+            for (byte b : strBytes) {
+                byteList.add(b);
+            }
+            byte zero = 0;
+            byteList.add(zero);
+        }
+
+        byte[] result = new byte[byteList.size()];
+        for (int i = 0; i < byteList.size(); i++) {
+            result[i] = byteList.get(i);
+        }
+
+        return result;
+    }
 }
 
 

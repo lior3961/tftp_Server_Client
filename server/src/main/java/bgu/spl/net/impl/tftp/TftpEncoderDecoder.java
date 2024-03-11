@@ -43,12 +43,6 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
                     {
                         return popBytes();  
                     } 
-                    break; 
-                case 6:
-                    if(len == 2)
-                    {
-                        return popBytes();
-                    } 
                     break;               
                 case 9:
                     if(len >=3 && nextByte == lastByte)
@@ -56,12 +50,6 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
                         return popBytes();  
                     }
                     break; 
-                case 10:
-                    if(len == 2)
-                    {
-                        return popBytes();
-                    }
-                    break;
                 default:
                     if(nextByte == lastByte)
                     {
@@ -69,7 +57,16 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
                     }       
             }
         }
-        pushByte(nextByte);          
+        pushByte(nextByte);
+        if(len == 2)
+        {
+            byte [] b = new byte []{bytes[0] , bytes[1]};       
+            short opCode = ( short ) ((( short ) b[0]) << 8 | ( short ) ( b[1]) );
+            if(opCode == 6 || opCode == 10)
+            {
+                return popBytes();
+            }
+        }
         return null;
     }
 
@@ -84,9 +81,6 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
     @Override
     public byte[] encode(byte[] message)
     {
-        byte[] ans = Arrays.copyOf(message , message.length+1);
-        byte lastByte = 0;
-        ans[ans.length-1] = lastByte;
         return  message;
     }
 
