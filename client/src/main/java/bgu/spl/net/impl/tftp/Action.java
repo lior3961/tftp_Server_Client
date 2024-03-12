@@ -1,5 +1,6 @@
 package bgu.spl.net.impl.tftp;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -24,8 +25,8 @@ public class Action {
     {
         this.needToSendData = false;
         this.needToDeleteFile = false;
-        Path serverFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Files");//get "Files" path
-        this.clientFiles = getFileList(serverFilesFolderPath.toString());
+        Path clientFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Files");//get "Files" path
+        this.clientFiles = getFileList(clientFilesFolderPath.toString());
         this.fileName = "";
         this.userName = "";
         this.connected = connected;
@@ -199,7 +200,7 @@ public class Action {
                     blockNumber = arrayToShort(blockNumberBytes);
                     System.out.println("ACK " + blockNumber);
                     blockNumber += 1;
-                    result = createDataPacket(result,blockNumber);
+                    result = createDataPacket(blockNumber);
                     break;
                 }
                 System.out.println("ACK 0");
@@ -246,21 +247,40 @@ public class Action {
         return b_short;
     }
 
-    public byte[] createDataPacket(byte[] content,short blockNumber)
+    public byte[] createDataPacket(short blockNumber)
     {
-        byte [] result = new byte[6+content.length];
-        byte[] opCodeBytes = shortToArray((short)3);
-        byte[] dataSizeBytes = shortToArray((short)content.length);
-        byte[] blockNumberBytes = shortToArray(blockNumber);
-        int offset = 0;
-        System.arraycopy(opCodeBytes, 0, result, offset, opCodeBytes.length);
-        offset += opCodeBytes.length;
-        System.arraycopy(dataSizeBytes, 0, result, offset, dataSizeBytes.length);
-        offset += dataSizeBytes.length;
-        System.arraycopy(blockNumberBytes, 0, result, offset, blockNumberBytes.length);
-        offset += blockNumberBytes.length;
-        System.arraycopy(content, 0, result, offset, content.length);
-        return result;
+        Path clientFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Files");//get "Files" path
+        try (FileInputStream fileInputStream = new FileInputStream(clientFilesFolderPath.resolve
+        (this.fileName).toFile())) {
+            long startPosition = (blockNumber - 1) * 512; // Calculate the starting position
+            fileInputStream.skip(startPosition); // Skip to the starting position
+            byte[] buffer = new byte[512];
+            int bytesRead = fileInputStream.read(buffer); // Read 512 bytes from the file
+            if (bytesRead != -1) 
+            {
+                byte[] packet = new byte[bytesRead + 6];
+                codesOfDataPacket(packet , (short) bytesRead,blockNumber);
+                System.arraycopy(buffer, 0, packet, 6, bytesRead);
+                return packet;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null; // Return an empty byte array if there was an error
+    }
+
+    public void codesOfDataPacket(byte[] packet , short blockSize, short blockNumber)
+    {
+        short opCode = 3;
+        byte [] opBytes = shortToArray(opCode);
+        byte [] blockBytes = shortToArray(blockNumber);
+        byte [] sizeBytes = shortToArray(blockSize);
+        packet[0] = opBytes[0];
+        packet[1] = opBytes[1];
+        packet[2] = sizeBytes[0];
+        packet[3] = sizeBytes[1];
+        packet[4] = blockBytes[0];
+        packet[5] = blockBytes[1];
     }
 
     public byte[] createAckPacket(short blockNumber)
@@ -311,6 +331,7 @@ public class Action {
     {
         return !this.connected;
     }
+
     
     public static Vector<String> getFileList(String directoryPath) {
     Vector<String> fileList = new Vector<String>();

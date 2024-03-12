@@ -11,6 +11,7 @@ import java.util.Scanner;
 public class TftpClient {
 
     public static Socket keyBoardSocket;
+    public static Socket listenerSocket;
     public static boolean needTolisten = false;
     public static Scanner scanner = new Scanner(System.in);
     public static boolean connected = true;
@@ -50,20 +51,27 @@ public class TftpClient {
             BufferedInputStream in = new BufferedInputStream(sock.getInputStream());
             BufferedOutputStream out = new BufferedOutputStream(sock.getOutputStream()))
             {
-                int read;
+                listenerSocket = sock;
                 while(!actions.shouldTerminate())
                 {
                     int packetSize = in.available();
                     if(packetSize > 0)
                     {
                         byte[] inputPacket = new byte[packetSize];
-                        int bytesRead = in.read(inputPacket);
+                        in.read(inputPacket);
                         byte[] returnMessage = actions.gotMessageFromServer(inputPacket);
-                        out.write(returnMessage);
-                        out.flush();
+                        if(returnMessage != null)
+                        {
+                            out.write(returnMessage);
+                            out.flush();
+                        }
+                        else
+                        {
+                            needTolisten = false;
+                        }
                     }
                 }
-                
+                listenerSocket.close();         
             }
             catch(IOException ex)
             {
