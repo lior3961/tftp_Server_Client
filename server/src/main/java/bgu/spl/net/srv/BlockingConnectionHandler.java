@@ -58,7 +58,6 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void close() throws IOException {
-        this.serverData.disconnectUser(connectionId);
         connected = false;
         sock.close();
     }

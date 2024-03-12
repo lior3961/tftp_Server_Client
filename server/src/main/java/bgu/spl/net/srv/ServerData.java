@@ -77,8 +77,6 @@ public class ServerData {
         {
             if(!this.users.get(userName))
             {
-                this.connections.disconnect(connectionId);
-                this.idToUserName.remove(connectionId);
                 return true;
             }
         }
