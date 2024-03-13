@@ -8,7 +8,7 @@ public class TftpServer {
         
         ServerData serverData = new ServerData();
         Server.threadPerClient(
-                7777, //port
+                Integer.parseInt(args[0]), //port
                 () -> new TftpProtocol(serverData), //protocol factory
                 TftpEncoderDecoder::new, serverData 
         ).serve();
