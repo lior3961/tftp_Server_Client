@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Scanner;
 import java.util.Vector;
 public class Action {
 
@@ -17,23 +16,35 @@ public class Action {
     private boolean needToDisc;
     private Vector<String> clientFiles;
     private String fileName;
-    private String userName;
     private boolean connected;
+    private boolean needTolisten;
+    private byte[] returnMessage;
+    private Object waiter;
+    private boolean keepUserInput;
+    private boolean isDirq;
+    private Vector<String> serverFiles;
+    private Vector<Byte>  fileBuffer;
     
 
-    public Action(boolean connected)
+    public Action()
     {
         this.needToSendData = false;
         this.needToDeleteFile = false;
         Path clientFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Files");//get "Files" path
         this.clientFiles = getFileList(clientFilesFolderPath.toString());
         this.fileName = "";
-        this.userName = "";
-        this.connected = connected;
         this.needToDisc = false;
+        this.needTolisten = false;
+        this.returnMessage = null;
+        this.connected = true;
+        this.waiter = new Object();
+        this.keepUserInput = false;
+        this.isDirq = false;
+        this.serverFiles = new Vector<String>();
+        this.fileBuffer = new Vector<Byte>();
     }
 
-    public byte[] createAction(String input)
+    public void createAction(String input)
     {
         byte[] msg = null;
         short opCode;
@@ -45,8 +56,9 @@ public class Action {
             switch (action) 
             {
                 case "LOGRQ":
-                    this.userName = content;
                     opCode = 7;
+                    this.isDirq = false;
+                    this.keepUserInput = false;
                     this.needToSendData = false;
                     this.needToDeleteFile = false;
                     this.needToDisc = false;
@@ -54,37 +66,53 @@ public class Action {
                     break;
                 case "RRQ":
                     this.fileName = content;
+                    Path clientFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Files");
+                    this.clientFiles = getFileList(clientFilesFolderPath.toString());
                     if(!this.clientFiles.contains(content))
                     {
                         opCode = 1;
+                        this.isDirq = false;
+                        this.keepUserInput = false;
                         this.needToSendData = false;
                         this.needToDeleteFile = true;
                         this.needToDisc = false;
                         msg = createPacket(opCode , content);
                         updateFiles(content, false, null);
-                        break;
                     }
-                    System.out.println("File already exist");
+                    else
+                    {
+                        System.out.println("File already exist");
+                    }
                     break;
                 case "WRQ":
                     this.fileName = content;
                     if(this.clientFiles.contains(content))
                     {
                         opCode = 2;
+                        this.isDirq = false;
+                        this.keepUserInput = false;
                         this.needToSendData = true;
                         this.needToDeleteFile = false;
                         this.needToDisc = false;
                         msg = createPacket(opCode , content);
                     }
-                    System.out.println("File doesnt exist");
+                    else
+                    {
+                        System.out.println("File doesnt exist");
+                    }
                     break;
                 case "DELRQ":
                     this.fileName = content;
                     opCode = 8;
+                    this.isDirq = false;
+                    this.keepUserInput = false;
                     this.needToSendData = false;
                     this.needToDeleteFile = false;
                     this.needToDisc = false;
                     msg = createPacket(opCode , content);
+                    break;
+                default:
+                    System.out.println("Invalid Command");
                     break;
             }
         }
@@ -94,6 +122,8 @@ public class Action {
             {
                 case "DISC":
                     opCode = 10;
+                    this.isDirq = false;
+                    this.keepUserInput = false;
                     this.needToSendData = false;
                     this.needToDeleteFile = false;
                     this.needToDisc = true;
@@ -101,14 +131,20 @@ public class Action {
                     break;
                 case "DIRQ":
                     opCode = 6;
+                    this.isDirq = true;
+                    this.keepUserInput = false;
                     this.needToSendData = false;
                     this.needToDeleteFile = false;
                     this.needToDisc = false;
                     msg = createPacket(opCode , input);
                     break;
+                default:
+                    System.out.println("Invalid Command");
+                    break;
+
             }
         }
-        return msg;
+        this.returnMessage = msg;
     }
 
     public byte[] createPacket(short opCode, String content)
@@ -168,70 +204,105 @@ public class Action {
         return result;
     }
 
-    public byte[] gotMessageFromServer(byte[] packet)
+    public void gotMessageFromServer(byte[] packet)
     {
+        byte[] result = null;
         if(packet == null)
         {
-            return null;
+            this.returnMessage = result;
         }
-        short opCode = arrayToShort(packet);
-        byte[] blockNumberBytes = new byte[2];
-        short blockNumber;
-        byte[] result = null;
-        switch (opCode)
+        else
         {
-            case 3:
-                blockNumberBytes[0] = packet[2];
-                blockNumberBytes[1] = packet[3];
-                blockNumber = arrayToShort(blockNumberBytes);
-                result = createAckPacket(blockNumber);
-                byte[] data = Arrays.copyOfRange(packet, 6, packet.length);
-                updateFiles(this.fileName, false, data);
-                break;
-            case 4:
-                if(needToDisc)
-                {
-                    this.connected = false;
-                }
-                if(needToSendData)
-                {
-                    blockNumberBytes[0] = packet[2];
-                    blockNumberBytes[1] = packet[3];
+            short opCode = arrayToShort(packet);
+            byte[] blockNumberBytes = new byte[2];
+            short blockNumber;
+            switch (opCode)
+            {
+                case 3:
+                    this.keepUserInput = false;
+                    blockNumberBytes[0] = packet[4];
+                    blockNumberBytes[1] = packet[5];
                     blockNumber = arrayToShort(blockNumberBytes);
-                    System.out.println("ACK " + blockNumber);
-                    blockNumber += 1;
-                    result = createDataPacket(blockNumber);
+                    result = createAckPacket(blockNumber);
+                    byte[] data = Arrays.copyOfRange(packet, 6, packet.length);
+                    if(isDirq)
+                    {
+                        handleDirqPacket(data);
+                    }
+                    else
+                    {
+                        updateFiles(this.fileName, false, data);
+                    }
+                    System.out.println("got block number: " + blockNumber);
+                    byte[] dataSizeBytes = new byte[2];
+                    dataSizeBytes[0] = packet[2];
+                    dataSizeBytes[1] = packet[3];
+                    short dataSize = arrayToShort(dataSizeBytes);
+                    if(dataSize < 512)
+                    {
+                        this.keepUserInput = true;
+                        if(!isDirq)
+                        {
+                            System.out.println("RRQ " + this.fileName + " completed");
+                        }
+                        else
+                        {
+                            for(String file : this.serverFiles)
+                            {
+                                System.out.println(file);
+                            }
+                            this.serverFiles.clear();
+                        }
+                    }
+                    break;
+                case 4:
+                    this.keepUserInput = false;
+                    if(needToDisc)
+                    {
+                        this.connected = false;
+                    }
+                    if(needToSendData)
+                    {
+                        blockNumberBytes[0] = packet[2];
+                        blockNumberBytes[1] = packet[3];
+                        blockNumber = arrayToShort(blockNumberBytes);
+                        System.out.println("ACK " + blockNumber);
+                        blockNumber += 1;
+                        result = createDataPacket(blockNumber);
+                        break;
+                    }
+                    System.out.println("ACK 0");
+                    break;
+                case 5:
+                {
+                    this.keepUserInput = false;
+                    byte[] errorMsgBytes = Arrays.copyOfRange(packet, 4, packet.length-1);
+                    String decodedString = new String(errorMsgBytes, StandardCharsets.UTF_8);
+                    System.out.println(decodedString);
+                    if(this.needToDeleteFile)
+                    {    
+                        updateFiles(this.fileName , true , null);
+                    }
                     break;
                 }
-                System.out.println("ACK 0");
-                break;
-            case 5:
-            {
-                byte[] errorMsgBytes = Arrays.copyOfRange(packet, 4, packet.length-1);
-                String decodedString = new String(errorMsgBytes, StandardCharsets.UTF_8);
-                System.out.println(decodedString);
-                if(this.needToDeleteFile)
-                {    
-                    updateFiles(this.fileName , true , null);
-                }
-            }
-            case 9:
-            {
-                byte[] fileNameBytes = Arrays.copyOfRange(packet, 3, packet.length-1);
-                String fileName = new String(fileNameBytes, StandardCharsets.UTF_8);
-                byte deleteOrAdded = packet[2];
-                if(deleteOrAdded == 0)
+                case 9:
                 {
-                    System.out.println("BCAST del " + fileName);
+                    byte[] fileNameBytes = Arrays.copyOfRange(packet, 3, packet.length-1);
+                    String fileName = new String(fileNameBytes, StandardCharsets.UTF_8);
+                    byte deleteOrAdded = packet[2];
+                    if(deleteOrAdded == 0)
+                    {
+                        System.out.println("BCAST del " + fileName);
+                    }
+                    else
+                    {
+                        System.out.println("BCAST add " + fileName);
+                    }
+                    break;
                 }
-                else
-                {
-                    System.out.println("BCAST add " + fileName);
-                }
-                break;
-            }
+            }      
+            this.returnMessage = result;      
         }
-        return result;
     }
 
     public byte[] shortToArray(short num)
@@ -266,6 +337,8 @@ public class Action {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        this.needToSendData = false;
+        System.out.println("WRQ " + this.fileName + " completed");
         return null; // Return an empty byte array if there was an error
     }
 
@@ -295,8 +368,8 @@ public class Action {
 
     public void updateFiles(String fileName, boolean delete, byte[] data)
     {
-        Path serverFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Files");
-        Path filePath = serverFilesFolderPath.resolve(fileName);
+        Path serverFilesFolderPath = (Paths.get("").toAbsolutePath()).resolve("Files"); //path to client files
+        Path filePath = serverFilesFolderPath.resolve(fileName);// path to new file
         if(delete)
         {
             this.clientFiles.remove(fileName);
@@ -308,11 +381,10 @@ public class Action {
             if(!this.clientFiles.contains(fileName))
             {
                 this.clientFiles.add(fileName);
-                System.out.println();
             }
             try 
             {
-                FileOutputStream fos = new FileOutputStream(fileName.toString(),true); //new file output stream with file path
+                FileOutputStream fos = new FileOutputStream(filePath.toString(),true); //new file output stream with file path
                 if(data != null)
                 {
                     fos.write(data); //creating file
@@ -348,4 +420,63 @@ public class Action {
     return fileList;
     }
 
+    public byte[] getReturnMesseage()
+    {
+        return this.returnMessage;
+    }
+
+    public boolean getNeedTolisten()
+    {
+        return this.needTolisten;
+    }
+
+    public void setNeedToListen()
+    {
+        this.needTolisten = !this.needTolisten;
+    }
+
+    public Object getWaiter()
+    {
+        return this.waiter;
+    }
+
+    public boolean getKeepUserInput()
+    {
+        return this.keepUserInput;
+    }
+
+    public void cleanReturnMassage()
+    {
+        this.returnMessage = null;
+    }
+
+    public void handleDirqPacket(byte[] data)
+    {
+        for (byte b : data)
+        {
+            if(b == 0)
+            {
+                this.serverFiles.add(bytesToString(this.fileBuffer));
+                fileBuffer.clear();
+            }
+            else
+            {
+                this.fileBuffer.add(b);
+            }
+        }
+        if(data.length < 512)
+        {
+            this.serverFiles.add(bytesToString(this.fileBuffer));
+            fileBuffer.clear();
+        }
+    }
+
+    public String bytesToString (Vector<Byte> vector)
+    {
+        byte[] byteArray = new byte[vector.size()];
+        for (int i = 0; i < byteArray.length; i++) {
+            byteArray[i] = vector.remove(0);
+        }
+        return new String(byteArray, StandardCharsets.UTF_8);
+    }
 }

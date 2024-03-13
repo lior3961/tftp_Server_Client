@@ -125,6 +125,7 @@ public class ServerActions {
                 }   
                 else
                 {
+                    this.filesByts = vectorToBytes(this.serverData.getFiles());
                     this.identifier = 6;
                     this.blockNumber = 1;
                     msg = createDirqDataPacket();
@@ -399,7 +400,6 @@ public class ServerActions {
         {
             this.deleteFileFromServerFile(fileName);
             this.serverData.deleteFileFromServer(fileName);
-            this.filesByts = vectorToBytes(this.serverData.getFiles());
         }
         else
         {

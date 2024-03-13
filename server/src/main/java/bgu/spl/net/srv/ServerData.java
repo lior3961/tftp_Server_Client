@@ -34,7 +34,10 @@ public class ServerData {
     public void logOut(int connectionId)
     {
         String userName = this.idToUserName.get(connectionId);
-        this.users.put(userName, false);
+        if(userName != null)
+        {
+            this.users.put(userName, false);
+        }
     }
 
     public boolean logInOrRegister(String userName, int connectionId) //true if logged in, false if ERROR
@@ -42,9 +45,6 @@ public class ServerData {
         if(this.users.containsKey(userName))
         {
             if(this.users.get(userName))
-                //*
-                // need to check if its firs action
-                // */
             {
                 return false; //already logged in - ERROR
             }

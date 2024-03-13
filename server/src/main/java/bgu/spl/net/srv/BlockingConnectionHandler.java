@@ -52,6 +52,7 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
         finally
         {
             this.serverData.disconnectUser(connectionId);
+            System.out.println("Discconect client: " + this.connectionId);
         }
 
     }
